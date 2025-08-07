@@ -55,7 +55,6 @@ func (r *redisStore) Get(ctx context.Context, sessionToken string) (tokenPkg.Tok
 	return session, nil
 }
 
-// Set implements contract.Store.
 func (r *redisStore) Set(ctx context.Context, sessionToken *tokenPkg.Token) error {
 	session, err := json.Marshal(sessionToken)
 	if err != nil {
