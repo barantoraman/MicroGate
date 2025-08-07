@@ -3,15 +3,19 @@ module github.com/barantoraman/microgate
 go 1.24.5
 
 require (
+	github.com/go-redis/redis/v8 v8.11.5
+	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	google.golang.org/grpc v1.67.3
+	google.golang.org/protobuf v1.36.1
 )
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 )
 
 require (
