@@ -19,6 +19,7 @@ func GetDatabase(cfg config.AuthServiceConfigurations) (dbContract.DBConnection,
 	case PqType:
 		return postgres.NewPostgresConnection(cfg)
 	case InMemoryType:
+		// TODO: Remove cfg; mock doesn't require any configuration.
 		return mock.NewMockConnection(cfg)
 	default:
 		return nil, errors.New("invalid database type")
