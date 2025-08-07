@@ -14,12 +14,12 @@ type pqConnection struct {
 	db *sql.DB
 }
 
-func (p *pqConnection) Close() {
-	p.db.Close()
-}
-
 func (p *pqConnection) DB() *sql.DB {
 	return p.db
+}
+
+func (p *pqConnection) Close() {
+	p.db.Close()
 }
 
 func NewPostgresConnection(cfg config.AuthServiceConfigurations) (dbContract.DBConnection, error) {

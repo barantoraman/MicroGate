@@ -13,6 +13,6 @@ func NewMockConnection(cfg config.AuthServiceConfigurations) (dbContract.DBConne
 	return &mockConnection{}, nil
 }
 
-func (m *mockConnection) Close() {}
-
 func (m *mockConnection) DB() *sql.DB { return nil }
+
+func (m *mockConnection) Close() {}
