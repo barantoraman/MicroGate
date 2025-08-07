@@ -13,29 +13,24 @@ type zapLogger struct {
 	logger *zap.Logger
 }
 
-// Debug implements contract.Logger.
 func (l *zapLogger) Debug(msg string, fields ...zap.Field) {
-	panic("unimplemented")
+	l.logger.Debug(msg, fields...)
 }
 
-// Error implements contract.Logger.
-func (l *zapLogger) Error(msg string, fields ...zap.Field) {
-	panic("unimplemented")
-}
-
-// Fatal implements contract.Logger.
-func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
-	panic("unimplemented")
-}
-
-// Info implements contract.Logger.
 func (l *zapLogger) Info(msg string, fields ...zap.Field) {
-	panic("unimplemented")
+	l.logger.Info(msg, fields...)
 }
 
-// Warn implements contract.Logger.
 func (l *zapLogger) Warn(msg string, fields ...zap.Field) {
-	panic("unimplemented")
+	l.logger.Warn(msg, fields...)
+}
+
+func (l *zapLogger) Error(msg string, fields ...zap.Field) {
+	l.logger.Error(msg, fields...)
+}
+
+func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
+	l.logger.Fatal(msg, fields...)
 }
 
 func NewLoggerWithLevel(level string) loggerContract.Logger {
