@@ -1,5 +1,10 @@
 package validator
 
+import (
+	"regexp"
+	"slices"
+)
+
 type Validator struct {
 	Errors map[string]string
 }
@@ -22,4 +27,20 @@ func (v *Validator) Check(ok bool, key, msg string) {
 	if !ok {
 		v.AddError(key, msg)
 	}
+}
+
+func In(value string, list ...string) bool {
+	return slices.Contains(list, value)
+}
+
+func Matches(value string, rx *regexp.Regexp) bool {
+	return rx.MatchString(value)
+}
+
+func Unique(values []string) bool {
+	uniqueValues := make(map[string]bool)
+	for _, v := range values {
+		uniqueValues[v] = true
+	}
+	return len(values) == len(uniqueValues)
 }
