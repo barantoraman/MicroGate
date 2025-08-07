@@ -26,7 +26,7 @@ func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations) ca
 	})
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		log.Fatalf("failed to ping redis: %s", err.Error())
+		log.Fatalf("failed to ping store: %s", err.Error())
 	}
 	return &redisStore{
 		client: client,
@@ -61,7 +61,7 @@ func (r *redisStore) Set(ctx context.Context, sessionToken *tokenPkg.Token) erro
 		return errors.New("failed to marshal sessions")
 	}
 	if err = r.client.Set(ctx, string(sessionToken.Hash), session, time.Minute*60).Err(); err != nil {
-		return errors.New("failed to save session to redis")
+		return errors.New("failed to save session")
 	}
 	return nil
 }
