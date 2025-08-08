@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	dbContract "github.com/barantoraman/microgate/internal/auth/db/contract"
@@ -32,7 +33,7 @@ func (u *userRepository) CreateUser(ctx context.Context, user *entity.User) erro
 
 	if err := u.db.QueryRowContext(ctx, query, args...).Scan(&user.UserID); err != nil {
 		switch {
-		// Buraya dikkat
+		// TODO
 		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
 			return entity.ErrDuplicateEmail
 		default:
@@ -43,9 +44,39 @@ func (u *userRepository) CreateUser(ctx context.Context, user *entity.User) erro
 }
 
 func (u *userRepository) GetUser(ctx context.Context, email string) (*entity.User, error) {
-	panic("unimplemented")
+	query := `
+		SELECT id, email, password_hash
+		FROM users
+		WHERE email = $1
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	var user entity.User
+	err := u.db.QueryRowContext(ctx, query, email).Scan(
+		&user.UserID,
+		&user.Email,
+		&user.PasswordHash,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, entity.ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &user, nil
 }
 
 func (u *userRepository) ServiceStatus(ctx context.Context) error {
-	panic("unimplemented")
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	if err := u.db.PingContext(ctx); err != nil {
+		return err
+	}
+	return nil
 }
