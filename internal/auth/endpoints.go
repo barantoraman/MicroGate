@@ -25,11 +25,21 @@ func New(s Service) Set {
 }
 
 func MakeIsAuthEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (any, error) {}
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(IsAuthRequest)
+
+		tkn, err := s.IsAuth(ctx, req.Token)
+		if err != nil {
+			return IsAuthResponse{Token: tkn, Err: err.Error()}, err
+		}
+		return IsAuthResponse{Token: tkn, Err: ""}, err
+	}
 }
 
 func MakeSignUpEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (any, error) {}
+	return func(ctx context.Context, request any) (any, error) {
+
+	}
 }
 
 func MakeLoginEndpoint(s Service) endpoint.Endpoint {

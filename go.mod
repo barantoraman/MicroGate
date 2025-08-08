@@ -11,7 +11,7 @@ require (
 	google.golang.org/protobuf v1.36.1
 )
 
-require github.com/go-kit/kit v0.13.0 // indirect
+require github.com/go-kit/kit v0.13.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
