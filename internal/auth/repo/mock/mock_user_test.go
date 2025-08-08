@@ -54,7 +54,7 @@ func TestMockRepository_GetUser(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existing user", func(t *testing.T) {
-		result, err := repo.GetUser(ctx, "lois@lane.com")
+		result, err := repo.GetUser(ctx, "anonymous@user.com")
 		require.Nil(t, result)
 		require.ErrorIs(t, err, entity.ErrRecordNotFound)
 	})
