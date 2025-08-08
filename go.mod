@@ -11,10 +11,12 @@ require (
 	google.golang.org/protobuf v1.36.1
 )
 
+require github.com/go-kit/kit v0.13.0 // indirect
+
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	golang.org/x/crypto v0.41.0 
+	golang.org/x/crypto v0.41.0
 	golang.org/x/net v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 )
