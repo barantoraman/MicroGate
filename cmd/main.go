@@ -24,6 +24,7 @@ import (
 )
 
 func main() {
+	// TODO: add zap fields to auth svc logs...
 	logger := logger.GetLogger("debug")
 
 	var cfg config.AuthServiceConfigurations
