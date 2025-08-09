@@ -49,13 +49,37 @@ func MakeSignUpEndpoint(s Service) endpoint.Endpoint {
 }
 
 func MakeLoginEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (any, error) {}
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(LoginRequest)
+
+		userId, sessionToken, err := s.Login(ctx, req.User)
+		if err != nil {
+			return LoginResponse{UserId: 0, Token: sessionToken, Err: err.Error()}, err
+		}
+		return LoginResponse{UserId: userId, Token: sessionToken, Err: ""}, nil
+	}
 }
 
 func MakeLogoutEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (any, error) {}
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(LogoutRequest)
+
+		err := s.Logout(ctx, req.Token)
+		if err != nil {
+			return LogoutResponse{Err: err.Error()}, err
+		}
+		return LogoutResponse{Err: ""}, nil
+	}
 }
 
 func MakeServiceStatusEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request any) (any, error) {}
+	return func(ctx context.Context, request any) (any, error) {
+		_ = request.(ServiceStatusRequest)
+
+		code, err := s.ServiceStatus(ctx)
+		if err != nil {
+			return ServiceStatusResponse{Code: code, Err: err.Error()}, err
+		}
+		return ServiceStatusResponse{Code: code, Err: ""}, nil
+	}
 }
