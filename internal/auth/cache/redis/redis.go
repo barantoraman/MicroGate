@@ -5,11 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	cacheContract "github.com/barantoraman/microgate/internal/auth/cache/contract"
 	"github.com/barantoraman/microgate/pkg/config"
+	loggerContract "github.com/barantoraman/microgate/pkg/logger/contract"
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
 	"github.com/go-redis/redis/v8"
 )
@@ -18,7 +18,7 @@ type redisStore struct {
 	client *redis.Client
 }
 
-func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations) cacheContract.Store {
+func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations, logger loggerContract.Logger) cacheContract.Store {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisUrl,
 		Password: cfg.RedisPass,
@@ -26,7 +26,7 @@ func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations) ca
 	})
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		log.Fatalf("failed to ping store: %s", err.Error())
+		logger.Fatal("failed to ping redis")
 	}
 	return &redisStore{
 		client: client,
