@@ -15,7 +15,7 @@ type mockTaskRepository struct {
 	tasks []entity.Task
 }
 
-func NewTaskRepository() repoContract.TaskRepository {
+func NewMockTaskRepository() repoContract.TaskRepository {
 	return &mockTaskRepository{
 		mu:    sync.RWMutex{},
 		tasks: make([]entity.Task, 0),
