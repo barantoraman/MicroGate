@@ -38,7 +38,13 @@ func MakeIsAuthEndpoint(s Service) endpoint.Endpoint {
 
 func MakeSignUpEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
+		req := request.(SignUpRequest)
 
+		userID, sessionToken, err := s.SignUp(ctx, req.User)
+		if err != nil {
+			return SignUpResponse{UserId: userID, Token: sessionToken, Err: err.Error()}, err
+		}
+		return SignUpResponse{UserId: userID, Token: sessionToken, Err: ""}, nil
 	}
 }
 
