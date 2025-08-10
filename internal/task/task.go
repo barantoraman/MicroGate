@@ -49,8 +49,8 @@ func (t *taskService) ListTask(ctx context.Context, userID int64) ([]entity.Task
 
 func (t *taskService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
 	if err := t.taskRepository.DeleteTask(ctx, taskID, userID); err != nil {
-		t.logger.Error("failed to delete event")
-		return errors.New("failed to delete event")
+		t.logger.Error("failed to delete task")
+		return errors.New("failed to delete task")
 	}
 	return nil
 }

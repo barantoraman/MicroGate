@@ -63,7 +63,7 @@ func (t *taskRepository) ListTask(ctx context.Context, userID int64) ([]entity.T
 	var tasks []entity.Task
 	var results []bson.M
 	if err = cursor.All(ctx, &results); err != nil {
-		return nil, errors.New("failed to get events from database")
+		return nil, errors.New("failed to get tasks from database")
 	}
 
 	for _, res := range results {
@@ -83,7 +83,7 @@ func (t *taskRepository) ListTask(ctx context.Context, userID int64) ([]entity.T
 func (t *taskRepository) DeleteTask(ctx context.Context, taskId string, userID int64) error {
 	id, err := primitive.ObjectIDFromHex(taskId)
 	if err != nil {
-		return errors.New("failed to convert eventId to ObjectID")
+		return errors.New("failed to convert taskId to ObjectID")
 	}
 	return t.collection.FindOneAndDelete(ctx, bson.M{"user_id": userID, "_id": id}).Err()
 }
