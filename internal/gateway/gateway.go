@@ -2,12 +2,16 @@ package gateway
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	authPb "github.com/barantoraman/microgate/internal/auth/pb"
 	authEntity "github.com/barantoraman/microgate/internal/auth/repo/entity"
 	taskPb "github.com/barantoraman/microgate/internal/task/pb"
 	taskEntity "github.com/barantoraman/microgate/internal/task/repo/entity"
+	taskPkg "github.com/barantoraman/microgate/internal/task/repo/task"
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
+	"github.com/barantoraman/microgate/pkg/validator"
 )
 
 type apiGatewayService struct {
@@ -15,9 +19,29 @@ type apiGatewayService struct {
 	authClient authPb.AuthClient
 }
 
-// AddTask implements Service.
 func (a *apiGatewayService) AddTask(ctx context.Context, task taskEntity.Task) (string, error) {
-	panic("unimplemented")
+	v := validator.New()
+	taskPkg.ValidateTask(v, task)
+	if !v.Valid() {
+		return "", errors.New("failed to validate event")
+	}
+
+	pbTask := &taskPb.Task{
+		Id:          task.Id.Hex(),
+		UserId:      task.UserID,
+		Title:       task.Title,
+		Description: task.Description,
+		Status:      task.Status,
+	}
+
+	resp, err := a.taskClient.CreateTask(ctx, &taskPb.CreateTaskRequest{
+		Task: pbTask,
+	})
+	if err != nil {
+		return resp.TaskId, fmt.Errorf("failed to validate event: %v", v.Errors)
+	}
+	return resp.TaskId, nil
+
 }
 
 // DeleteTask implements Service.
