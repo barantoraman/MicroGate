@@ -120,7 +120,38 @@ func (a *apiGatewayService) SignUp(ctx context.Context, user authEntity.User) (i
 
 // Login implements Service.
 func (a *apiGatewayService) Login(ctx context.Context, user authEntity.User) (int64, tokenPkg.Token, error) {
-	panic("unimplemented")
+	err := user.Set(user.Password)
+	if err != nil {
+		return 0, tokenPkg.Token{}, fmt.Errorf("failed to hash password %w", err)
+	}
+
+	v := validator.New()
+	userPkg.ValidateUser(v, &user)
+	if !v.Valid() {
+		return 0, tokenPkg.Token{}, fmt.Errorf("failed to user: %v", v.Errors)
+	}
+
+	usr := authPb.User{
+		Email:    user.Email,
+		Password: user.Password,
+	}
+
+	resp, err := a.authClient.Login(ctx, &authPb.LoginRequest{
+		User: &usr,
+	})
+	if err != nil {
+		return resp.UserId, tokenPkg.Token{}, errors.New(resp.Err)
+	}
+
+	tkn := tokenPkg.Token{
+		PlainText: resp.Token.PlaintText,
+		Hash:      resp.Token.Hash,
+		UserID:    resp.Token.UserId,
+		Expiry:    resp.Token.Expiry.AsTime(),
+		Scope:     resp.Token.Scope,
+	}
+
+	return resp.UserId, tkn, nil
 }
 
 // Logout implements Service.
