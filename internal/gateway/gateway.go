@@ -12,6 +12,7 @@ import (
 	taskPkg "github.com/barantoraman/microgate/internal/task/repo/task"
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
 	"github.com/barantoraman/microgate/pkg/validator"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type apiGatewayService struct {
@@ -23,7 +24,7 @@ func (a *apiGatewayService) AddTask(ctx context.Context, task taskEntity.Task) (
 	v := validator.New()
 	taskPkg.ValidateTask(v, task)
 	if !v.Valid() {
-		return "", errors.New("failed to validate event")
+		return "", errors.New("failed to validate task")
 	}
 
 	pbTask := &taskPb.Task{
@@ -38,19 +39,41 @@ func (a *apiGatewayService) AddTask(ctx context.Context, task taskEntity.Task) (
 		Task: pbTask,
 	})
 	if err != nil {
-		return resp.TaskId, fmt.Errorf("failed to validate event: %v", v.Errors)
+		return resp.TaskId, fmt.Errorf("failed to validate task: %v", v.Errors)
 	}
 	return resp.TaskId, nil
 
 }
 
-// DeleteTask implements Service.
-func (a *apiGatewayService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
-	panic("unimplemented")
-}
-
 // ListTask implements Service.
 func (a *apiGatewayService) ListTask(ctx context.Context, userID int64) ([]taskEntity.Task, error) {
+	resp, err := a.taskClient.ListTask(ctx, &taskPb.ListTaskRequest{
+		UserId: userID,
+	})
+	if err != nil {
+		return nil, errors.New("failed to list task")
+	}
+
+	var tasks []taskEntity.Task
+	for _, e := range resp.Tasks {
+		objId, err := primitive.ObjectIDFromHex(e.Id)
+		if err != nil {
+			return nil, errors.New("failed to convert object id")
+		}
+		task := taskEntity.Task{
+			Id:          objId,
+			UserID:      e.UserId,
+			Title:       e.Title,
+			Description: e.Description,
+			Status:      e.Status,
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, nil
+}
+
+// DeleteTask implements Service.
+func (a *apiGatewayService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
 	panic("unimplemented")
 }
 
