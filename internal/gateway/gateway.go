@@ -14,11 +14,19 @@ import (
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
 	"github.com/barantoraman/microgate/pkg/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type apiGatewayService struct {
 	taskClient taskPb.TaskServiceClient
 	authClient authPb.AuthClient
+}
+
+func NewApiGatewayService(taskClient taskPb.TaskServiceClient, authClient authPb.AuthClient) Service {
+	return &apiGatewayService{
+		taskClient: taskClient,
+		authClient: authClient,
+	}
 }
 
 func (a *apiGatewayService) AddTask(ctx context.Context, task taskEntity.Task) (string, error) {
@@ -46,7 +54,6 @@ func (a *apiGatewayService) AddTask(ctx context.Context, task taskEntity.Task) (
 
 }
 
-// ListTask implements Service.
 func (a *apiGatewayService) ListTask(ctx context.Context, userID int64) ([]taskEntity.Task, error) {
 	resp, err := a.taskClient.ListTask(ctx, &taskPb.ListTaskRequest{
 		UserId: userID,
@@ -73,7 +80,6 @@ func (a *apiGatewayService) ListTask(ctx context.Context, userID int64) ([]taskE
 	return tasks, nil
 }
 
-// DeleteTask implements Service.
 func (a *apiGatewayService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
 	_, err := a.taskClient.DeleteTask(ctx, &taskPb.DeleteTaskRequest{
 		TaskId: taskID,
@@ -85,7 +91,6 @@ func (a *apiGatewayService) DeleteTask(ctx context.Context, taskID string, userI
 	return nil
 }
 
-// SignUp implements Service.
 func (a *apiGatewayService) SignUp(ctx context.Context, user authEntity.User) (int64, tokenPkg.Token, error) {
 	err := user.Set(user.Password)
 	if err != nil {
@@ -118,7 +123,6 @@ func (a *apiGatewayService) SignUp(ctx context.Context, user authEntity.User) (i
 	return resp.UserId, tkn, nil
 }
 
-// Login implements Service.
 func (a *apiGatewayService) Login(ctx context.Context, user authEntity.User) (int64, tokenPkg.Token, error) {
 	err := user.Set(user.Password)
 	if err != nil {
@@ -154,14 +158,23 @@ func (a *apiGatewayService) Login(ctx context.Context, user authEntity.User) (in
 	return resp.UserId, tkn, nil
 }
 
-// Logout implements Service.
-func (a *apiGatewayService) Logout(ctx context.Context, token tokenPkg.Token) error {
-	panic("unimplemented")
-}
-
-func NewApiGatewayService(taskClient taskPb.TaskServiceClient, authClient authPb.AuthClient) Service {
-	return &apiGatewayService{
-		taskClient: taskClient,
-		authClient: authClient,
+func (a *apiGatewayService) Logout(ctx context.Context, sToken tokenPkg.Token) error {
+	v := validator.New()
+	tokenPkg.ValidateTokenPlaintext(v, sToken.PlainText)
+	if !v.Valid() {
+		return fmt.Errorf("failed to validate token: %v", v.Errors)
 	}
+	tkn := &authPb.Token{
+		PlaintText: sToken.PlainText,
+		Hash:       sToken.Hash,
+		UserId:     sToken.UserID,
+		Expiry:     timestamppb.New(sToken.Expiry),
+		Scope:      sToken.Scope,
+	}
+
+	resp, err := a.authClient.Logout(ctx, &authPb.LogoutRequest{Token: tkn})
+	if err != nil {
+		return errors.New(resp.Err)
+	}
+	return nil
 }
