@@ -74,7 +74,14 @@ func (a *apiGatewayService) ListTask(ctx context.Context, userID int64) ([]taskE
 
 // DeleteTask implements Service.
 func (a *apiGatewayService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
-	panic("unimplemented")
+	_, err := a.taskClient.DeleteTask(ctx, &taskPb.DeleteTaskRequest{
+		TaskId: taskID,
+		UserId: userID,
+	})
+	if err != nil {
+		return errors.New("failed to delete task")
+	}
+	return nil
 }
 
 // Login implements Service.
