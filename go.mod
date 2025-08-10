@@ -14,6 +14,12 @@ require (
 require github.com/go-kit/kit v0.13.0
 
 require (
+	github.com/gorilla/mux v1.8.1
+	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce
+	golang.org/x/time v0.12.0
+)
+
+require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
