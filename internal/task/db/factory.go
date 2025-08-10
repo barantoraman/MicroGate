@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	mongoType    = "mongo"
+	MongoType    = "mongo"
 	InMemoryType = "inmemory"
 )
 
 func GetDatabase(cfg config.TaskServiceConfigurations) (dbContract.DBConnection, error) {
 	switch cfg.DBType {
-	case mongoType:
+	case MongoType:
 		return mongo.NewMongoConnection(cfg)
 	case InMemoryType:
 		return mock.NewMockConnection()
