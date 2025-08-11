@@ -33,7 +33,6 @@ func (u *userRepository) CreateUser(ctx context.Context, user *entity.User) erro
 
 	if err := u.db.QueryRowContext(ctx, query, args...).Scan(&user.UserID); err != nil {
 		switch {
-		// TODO
 		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
 			return entity.ErrDuplicateEmail
 		default:

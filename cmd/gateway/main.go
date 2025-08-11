@@ -20,10 +20,14 @@ import (
 
 func main() {
 	logger := logger.GetLogger("debug")
+
 	var cfg config.ApiGatewayServiceConfigurations
 	err := config.GetLoader().GetConfigByKey("api_gateway_service", &cfg)
 	if err != nil {
-		logger.Fatal("failed to get config")
+		logger.Fatal("failed to get config",
+			zap.String("service", "api-gateway"),
+			zap.Error(err),
+		)
 	}
 
 	var grpcAddrAuth = net.JoinHostPort(cfg.AuthServiceHost, cfg.AuthServicePort)
@@ -32,12 +36,22 @@ func main() {
 
 	taskClient, err := client.NewTaskClient(grpcAddrTask)
 	if err != nil {
-		logger.Fatal("failed to get task client")
+		logger.Fatal("failed to get task client",
+			zap.String("service", "api-gateway"),
+			zap.String("target", "task-service"),
+			zap.String("address", grpcAddrTask),
+			zap.Error(err),
+		)
 	}
 
 	authClient, err := client.NewAuthClient(grpcAddrAuth)
 	if err != nil {
-		logger.Fatal("failed to get auth client")
+		logger.Fatal("failed to get auth client",
+			zap.String("service", "api-gateway"),
+			zap.String("target", "auth-service"),
+			zap.String("address", grpcAddrAuth),
+			zap.Error(err),
+		)
 	}
 
 	service := gateway.NewApiGatewayService(taskClient, authClient)
@@ -48,11 +62,23 @@ func main() {
 	{
 		httpListener, err := net.Listen("tcp", httpAddr)
 		if err != nil {
-			logger.Fatal("error during http listen")
+			logger.Fatal("error during http listen",
+				zap.String("service", "api-gateway"),
+				zap.String("address", httpAddr),
+				zap.Error(err),
+			)
 		}
+
 		g.Add(func() error {
+			logger.Info("HTTP server started",
+				zap.String("service", "api-gateway"),
+				zap.String("address", httpAddr),
+			)
 			return http.Serve(httpListener, httpHandler)
 		}, func(error) {
+			logger.Info("HTTP server stopped",
+				zap.String("service", "api-gateway"),
+			)
 			httpListener.Close()
 		})
 	}
@@ -72,6 +98,9 @@ func main() {
 		})
 	}
 	if err := g.Run(); err != nil {
-		logger.Error("server stopped", zap.Error(err))
+		logger.Error("server stopped unexpectedly",
+			zap.String("service", "api-gateway"),
+			zap.Error(err),
+		)
 	}
 }

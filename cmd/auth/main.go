@@ -24,18 +24,17 @@ import (
 )
 
 func main() {
-	// TODO: add zap fields to auth svc logs...
 	logger := logger.GetLogger("debug")
 
 	var cfg config.AuthServiceConfigurations
 	loader := config.GetLoader()
 	if err := loader.GetConfigByKey("auth_service", &cfg); err != nil {
-		logger.Fatal("failed to get config", zap.Error(err))
+		logger.Fatal("configuration load failed", zap.Error(err))
 	}
 
 	conn, err := db.GetDatabase(cfg)
 	if err != nil {
-		logger.Fatal("failed to connect to db", zap.Error(err))
+		logger.Fatal("database connection failed", zap.Error(err))
 	}
 	defer conn.Close()
 
@@ -55,17 +54,17 @@ func main() {
 	{
 		grpcListener, err := net.Listen("tcp", grpcAddr)
 		if err != nil {
-			logger.Fatal("error during grpc listen", zap.Error(err))
+			logger.Fatal("gRPC listener initialization failed", zap.Error(err))
 		}
 
 		g.Add(func() error {
-			logger.Debug("starting gRPC server", zap.String("addr", grpcAddr))
+			logger.Info("starting gRPC server", zap.String("address", grpcAddr))
 			baseServer := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
 			pb.RegisterAuthServer(baseServer, gRPCServer)
 			healthpb.RegisterHealthServer(baseServer, healthServer)
 			return baseServer.Serve(grpcListener)
 		}, func(error) {
-			logger.Info("shutting down gRPC server")
+			logger.Info("gRPC server shutting down")
 			grpcListener.Close()
 		})
 	}
@@ -77,7 +76,7 @@ func main() {
 			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 			select {
 			case sig := <-c:
-				logger.Info("received signal", zap.String("signal", sig.String()))
+				logger.Warn("termination signal received", zap.String("signal", sig.String()))
 				cancel()
 				return fmt.Errorf("signal received: %s", sig)
 			case <-cancelInterrupt:
@@ -89,6 +88,8 @@ func main() {
 	}
 
 	if err := g.Run(); err != nil {
-		logger.Error("server stopped", zap.Error(err))
+		logger.Error("server stopped with error", zap.Error(err))
+	} else {
+		logger.Info("server stopped gracefully")
 	}
 }

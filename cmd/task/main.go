@@ -22,19 +22,25 @@ import (
 )
 
 func main() {
-	// TODO: add zap fields to task svc logs...
 	logger := logger.GetLogger("debug")
 
 	var cfg config.TaskServiceConfigurations
 	loader := config.GetLoader()
 	if err := loader.GetConfigByKey("task_service", &cfg); err != nil {
-		logger.Fatal("failed to get config", zap.Error(err))
+		logger.Fatal("failed to get config",
+			zap.Error(err),
+			zap.String("service", "task-service"),
+		)
 	}
 
 	conn, err := db.GetDatabase(cfg)
 	fmt.Printf("cfg.DBType: %v\n", cfg.DBType)
 	if err != nil {
-		logger.Fatal("failed to connect to db", zap.Error(err))
+		logger.Fatal("failed to connect to db",
+			zap.Error(err),
+			zap.String("service", "task-service"),
+			zap.String("db_type", cfg.DBType),
+		)
 	}
 	defer conn.Close()
 
@@ -50,17 +56,26 @@ func main() {
 	{
 		grpcListener, err := net.Listen("tcp", grpcAddr)
 		if err != nil {
-			logger.Fatal("error during grpc listen", zap.Error(err))
+			logger.Fatal("error during grpc listen",
+				zap.Error(err),
+				zap.String("service", "task-service"),
+				zap.String("addr", grpcAddr),
+			)
 		}
 
 		g.Add(func() error {
-			logger.Debug("starting gRPC server", zap.String("addr", grpcAddr))
+			logger.Info("starting gRPC server",
+				zap.String("service", "task-service"),
+				zap.String("addr", grpcAddr),
+			)
 			baseServer := grpc.NewServer(grpc.UnaryInterceptor(kitgrpc.Interceptor))
 			pb.RegisterTaskServiceServer(baseServer, gRPCServer)
 			healthpb.RegisterHealthServer(baseServer, healthServer)
 			return baseServer.Serve(grpcListener)
 		}, func(error) {
-			logger.Info("shutting down gRPC server")
+			logger.Info("shutting down gRPC server",
+				zap.String("service", "task-service"),
+			)
 			grpcListener.Close()
 		})
 	}
@@ -82,6 +97,9 @@ func main() {
 	}
 
 	if err := g.Run(); err != nil {
-		logger.Error("server stopped", zap.Error(err))
+		logger.Error("server stopped",
+			zap.Error(err),
+			zap.String("service", "task-service"),
+		)
 	}
 }

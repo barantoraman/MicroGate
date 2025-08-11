@@ -11,6 +11,7 @@ import (
 	taskPkg "github.com/barantoraman/microgate/internal/task/repo/task"
 	loggerContract "github.com/barantoraman/microgate/pkg/logger/contract"
 	"github.com/barantoraman/microgate/pkg/validator"
+	"go.uber.org/zap"
 )
 
 type taskService struct {
@@ -28,11 +29,18 @@ func NewService(taskRepo repoContract.TaskRepository, logger loggerContract.Logg
 func (t *taskService) CreateTask(ctx context.Context, task entity.Task) (string, error) {
 	v := validator.New()
 	if taskPkg.ValidateTask(v, task); !v.Valid() {
-		t.logger.Error("validation error")
+		t.logger.Error("validation error",
+			zap.Any("validation_errors", v.Errors),
+			zap.String("service", "task-service"),
+		)
 		return "", fmt.Errorf("validation error")
 	}
 	if err := t.taskRepository.CreateTask(ctx, &task); err != nil {
-		t.logger.Error("failed to create task")
+		t.logger.Error("failed to create task",
+			zap.Error(err),
+			zap.String("task_id", task.Id.Hex()),
+			zap.String("service", "task-service"),
+		)
 		return "", errors.New("failed to create task")
 	}
 	return task.Id.Hex(), nil
@@ -41,7 +49,11 @@ func (t *taskService) CreateTask(ctx context.Context, task entity.Task) (string,
 func (t *taskService) ListTask(ctx context.Context, userID int64) ([]entity.Task, error) {
 	tasks, err := t.taskRepository.ListTask(ctx, userID)
 	if err != nil {
-		t.logger.Error("failed to get tasks")
+		t.logger.Error("failed to get tasks",
+			zap.Error(err),
+			zap.Int64("user_id", userID),
+			zap.String("service", "task-service"),
+		)
 		return nil, errors.New("failed to get tasks")
 	}
 	return tasks, nil
@@ -49,7 +61,12 @@ func (t *taskService) ListTask(ctx context.Context, userID int64) ([]entity.Task
 
 func (t *taskService) DeleteTask(ctx context.Context, taskID string, userID int64) error {
 	if err := t.taskRepository.DeleteTask(ctx, taskID, userID); err != nil {
-		t.logger.Error("failed to delete task")
+		t.logger.Error("failed to delete task",
+			zap.Error(err),
+			zap.String("task_id", taskID),
+			zap.Int64("user_id", userID),
+			zap.String("service", "task-service"),
+		)
 		return errors.New("failed to delete task")
 	}
 	return nil
@@ -57,7 +74,10 @@ func (t *taskService) DeleteTask(ctx context.Context, taskID string, userID int6
 
 func (t *taskService) ServiceStatus(ctx context.Context) (int, error) {
 	if err := t.taskRepository.ServiceStatus(ctx); err != nil {
-		t.logger.Error("task service status error")
+		t.logger.Error("task service status error",
+			zap.Error(err),
+			zap.String("service", "task-service"),
+		)
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil

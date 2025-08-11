@@ -12,6 +12,7 @@ import (
 	loggerContract "github.com/barantoraman/microgate/pkg/logger/contract"
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 )
 
 type redisStore struct {
@@ -26,7 +27,11 @@ func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations, lo
 	})
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		logger.Fatal("failed to ping redis")
+		logger.Fatal("failed to ping redis",
+			zap.Error(err),
+			zap.String("redis_addr", cfg.RedisUrl),
+			zap.Int("redis_db", 0),
+		)
 	}
 	return &redisStore{
 		client: client,

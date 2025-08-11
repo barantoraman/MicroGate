@@ -20,7 +20,6 @@ func NewMockRepository() repoContract.UserRepository {
 	}
 }
 
-// CreateUser implements contract.UserRepository.
 func (m *mockRepository) CreateUser(ctx context.Context, user *entity.User) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -36,14 +35,12 @@ func (m *mockRepository) CreateUser(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-// GetUser implements contract.UserRepository.
 func (m *mockRepository) GetUser(ctx context.Context, email string) (*entity.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	for _, u := range m.users {
 		if u.Email == email {
-			// give the reference of user copy..
 			ucp := u
 			return &ucp, nil
 		}
@@ -51,7 +48,6 @@ func (m *mockRepository) GetUser(ctx context.Context, email string) (*entity.Use
 	return nil, entity.ErrRecordNotFound
 }
 
-// ServiceStatus implements contract.UserRepository.
 func (m *mockRepository) ServiceStatus(ctx context.Context) error {
 	return nil
 }
