@@ -7,7 +7,6 @@ RUN go mod download
 
 RUN apk add curl && \
     curl -L https://github.com/golang-migrate/migrate/releases/download/v4.15.1/migrate.linux-amd64.tar.gz | tar xvz
-
     
 RUN apk add git &&\
     git clone https://github.com/grpc-ecosystem/grpc-health-probe.git
