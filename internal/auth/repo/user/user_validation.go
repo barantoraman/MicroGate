@@ -18,10 +18,7 @@ func ValidatePassword(v *validator.Validator, password string) {
 
 func ValidateUser(v *validator.Validator, u *entity.User) {
 	ValidateEmail(v, u.Email)
-	if u.Password != "" {
-		ValidatePassword(v, u.Password)
-	}
-	if u.PasswordHash == nil {
-		panic("missing password hash for users")
-	}
+	ValidatePassword(v, u.Password)
+
+	v.Check(u.PasswordHash != nil, "password_hash", "password hash must be provided")
 }

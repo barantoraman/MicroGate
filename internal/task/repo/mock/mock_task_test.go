@@ -50,7 +50,7 @@ func TestMockTaskRepository(t *testing.T) {
 	})
 
 	t.Run("DeleteTask - Record not found", func(t *testing.T) {
-		err := repo.DeleteTask(ctx, primitive.NewObjectID().Hex(), 999) // wrong userID
+		err := repo.DeleteTask(ctx, primitive.NewObjectID().Hex(), 999)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "record not found")
 	})
