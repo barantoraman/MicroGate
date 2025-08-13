@@ -6,6 +6,7 @@ import (
 	"github.com/barantoraman/microgate/pkg/token"
 )
 
+// AddTask - req&resp
 type (
 	AddTaskRequest struct {
 		Task taskEntity.Task `json:"task"`
@@ -16,6 +17,7 @@ type (
 	}
 )
 
+// ListTask - req&resp
 type (
 	ListTaskRequest struct {
 		UserID int64 `json:"user_id"`
@@ -26,6 +28,7 @@ type (
 	}
 )
 
+// DeleteTask - req&resp
 type (
 	DeleteTaskRequest struct {
 		TaskID string `json:"task_id,omitempty"`
@@ -36,6 +39,7 @@ type (
 	}
 )
 
+// SignUp - req&resp
 type (
 	SignUpRequest struct {
 		User authEntity.User `json:"user"`
@@ -47,6 +51,7 @@ type (
 	}
 )
 
+// Login - req&resp
 type (
 	LoginRequest struct {
 		User authEntity.User `json:"user"`
@@ -58,6 +63,7 @@ type (
 	}
 )
 
+// Logout - req&resp
 type (
 	LogoutRequest struct {
 		Token token.Token `json:"token"`

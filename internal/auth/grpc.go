@@ -174,8 +174,6 @@ func encodeLogoutResponse(_ context.Context, res any) (any, error) {
 }
 
 func decodeServiceStatusRequest(_ context.Context, req any) (any, error) {
-	// _ = req.(*pb.ServiceStatusRequest)
-	// return ServiceStatusRequest{}, nil
 	_ = req.(*pb.ServiceStatusRequest)
 	return ServiceStatusRequest{}, nil
 }

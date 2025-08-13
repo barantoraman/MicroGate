@@ -54,8 +54,8 @@ services:
   auth:
     container_name: microgate_auth-svc
     build:
-      context: .
-      dockerfile: auth-service.Dockerfile
+      context: ../..
+      dockerfile: deployments/docker/auth-service.Dockerfile
     restart: on-failure
     ports:
       - "8083:8083"
@@ -75,8 +75,8 @@ services:
   task:
     container_name: microgate_task-svc
     build:
-      context: .
-      dockerfile: task-service.Dockerfile
+      context: ../..
+      dockerfile: deployments/docker/task-service.Dockerfile
     restart: on-failure
     ports:
       - "8082:8082"
@@ -94,11 +94,24 @@ services:
   api_gateway:
     container_name: microgate_api_gateway-svc
     build:
-      context: .
-      dockerfile: gateway-service.Dockerfile
+      context: ../..
+      dockerfile: deployments/docker/gateway-service.Dockerfile
     restart: on-failure
     ports:
       - "8081:8081"
+    depends_on:
+      task:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    networks:
+      - microgate_net
+  
+  integration_tests:
+    container_name: microgate_integration_tests
+    build:
+      context: ../..
+      dockerfile: deployments/docker/integration-test.Dockerfile
     depends_on:
       task:
         condition: service_healthy

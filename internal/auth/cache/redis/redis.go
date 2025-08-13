@@ -12,6 +12,7 @@ import (
 	loggerContract "github.com/barantoraman/microgate/pkg/logger/contract"
 	tokenPkg "github.com/barantoraman/microgate/pkg/token"
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 )
 
 type redisStore struct {
@@ -26,17 +27,24 @@ func NewRedisStore(ctx context.Context, cfg config.AuthServiceConfigurations, lo
 	})
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		logger.Fatal("failed to ping redis")
+		logger.Fatal("failed to ping redis",
+			zap.Error(err),
+			zap.String("redis_addr", cfg.RedisUrl),
+			zap.Int("redis_db", 0),
+		)
 	}
 	return &redisStore{
 		client: client,
 	}
 }
 
-func (r *redisStore) Delete(ctx context.Context, token string) error {
-	_, err := r.client.Del(ctx, token).Result()
+func (r *redisStore) Set(ctx context.Context, sessionToken *tokenPkg.Token) error {
+	session, err := json.Marshal(sessionToken)
 	if err != nil {
-		return errors.New("failed to delete session")
+		return errors.New("failed to marshal sessions")
+	}
+	if err = r.client.Set(ctx, string(sessionToken.Hash), session, time.Minute*60).Err(); err != nil {
+		return errors.New("failed to save session")
 	}
 	return nil
 }
@@ -55,13 +63,10 @@ func (r *redisStore) Get(ctx context.Context, sessionToken string) (tokenPkg.Tok
 	return session, nil
 }
 
-func (r *redisStore) Set(ctx context.Context, sessionToken *tokenPkg.Token) error {
-	session, err := json.Marshal(sessionToken)
+func (r *redisStore) Delete(ctx context.Context, token string) error {
+	_, err := r.client.Del(ctx, token).Result()
 	if err != nil {
-		return errors.New("failed to marshal sessions")
-	}
-	if err = r.client.Set(ctx, string(sessionToken.Hash), session, time.Minute*60).Err(); err != nil {
-		return errors.New("failed to save session")
+		return errors.New("failed to delete session")
 	}
 	return nil
 }
