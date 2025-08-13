@@ -13,19 +13,15 @@ confirm:
 # DEVELOPMENT 								   
 # ==================================================================================== #
 
-# Create a new migration file for the Auth service database
 db/migrate/new/auth:
 	migrate create -seq -ext=.sql -dir=./internal/auth/db/migrations/ create_user_table
 
-# Apply all pending migrations for the Auth service database
 db/migrate/up/auth: confirm
 	migrate -path=./internal/auth/db/migrations -database=${AUTH_DB_DSN} up
 
-# Generate gRPC code from Task service proto definitions
 proto/create/task: confirm
 	cd internal/task/pb; ./proto.sh
 
-# Generate gRPC code from Auth service proto definitions
 proto/create/auth: confirm
 	cd internal/auth/pb; ./proto.sh
 
@@ -43,20 +39,32 @@ test/all:
 	CGO_ENABLED=0 go test -v -cover ./internal/task/db/mock ./internal/task/repo/mock
 
 # ==================================================================================== #
-# 							 	    PRODUCTION								           #
+# PRODUCTION								           
 # ==================================================================================== #
 
-# Build the Docker containers
-docker/build:
-	docker compose build
+# Build containers for production
+docker/prod/build:
+	docker compose -f deployments/compose/docker-compose.yaml build
 
-# Run the Docker containers in detached mode
-docker/run:
-	docker compose up -d
+# Run containers for production
+docker/prod/run:
+	docker compose -f deployments/compose/docker-compose.yaml up -d
 
-# Stop and remove the Docker containers
-docker/stop:
-	docker compose down
+# Stop production containers
+docker/prod/stop:
+	docker compose -f deployments/compose/docker-compose.yaml down
+
+# Build containers for integration tests
+docker/test/build:
+	docker compose -f deployments/compose/docker-compose-test.yaml build
+
+# Run containers for integration tests
+docker/test/run:
+	docker compose -f deployments/compose/docker-compose-test.yaml up --build --exit-code-from integration_tests
+
+# Stop integration test containers
+docker/test/stop:
+	docker compose -f deployments/compose/docker-compose-test.yaml down
 
 # Enable Docker-related configuration in the service file
 config/docker:
@@ -79,7 +87,7 @@ local/run/gateway:
 	go run ./cmd/gateway
 
 # ==================================================================================== #
-# QUALITY CONTROL								       #
+# QUALITY CONTROL
 # ==================================================================================== #
 .PHONY: audit
 audit: vendor

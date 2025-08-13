@@ -14,14 +14,6 @@ type pqConnection struct {
 	db *sql.DB
 }
 
-func (p *pqConnection) DB() *sql.DB {
-	return p.db
-}
-
-func (p *pqConnection) Close() {
-	p.db.Close()
-}
-
 func NewPostgresConnection(cfg config.AuthServiceConfigurations) (dbContract.DBConnection, error) {
 	db, err := sql.Open("postgres", cfg.DSN)
 	if err != nil {
@@ -47,4 +39,12 @@ func NewPostgresConnection(cfg config.AuthServiceConfigurations) (dbContract.DBC
 	return &pqConnection{
 		db: db,
 	}, nil
+}
+
+func (p *pqConnection) DB() *sql.DB {
+	return p.db
+}
+
+func (p *pqConnection) Close() {
+	p.db.Close()
 }

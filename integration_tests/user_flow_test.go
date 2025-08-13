@@ -2,8 +2,10 @@ package integrationtests
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"math/big"
@@ -22,199 +24,182 @@ func randomSuffix() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), nBig.Int64())
 }
 
-func TestUserFlow(t *testing.T) {
-	client := &http.Client{
-		Timeout: 15 * time.Second,
-	}
-
-	email := fmt.Sprintf("testuser-%s@test.com", randomSuffix())
-
-	// Helper: authorized request
-	doAuthRequest := func(method, url, token string, body io.Reader) (*http.Response, error) {
-		req, err := http.NewRequest(method, url, body)
+func doAuthRequest(t *testing.T, client *http.Client, method, url, token string, body any) *http.Response {
+	t.Helper()
+	var reader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
 		if err != nil {
-			return nil, err
+			t.Fatalf("failed to marshal body: %v", err)
 		}
+		reader = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), method, url, reader)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
-		if body != nil {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		return client.Do(req)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	// --- Happy Path ---
-
-	// Sign Up
-	signupBody := fmt.Sprintf(`{"user":{"email":"%s","password":"test1234test"}}`, email)
-	resp, err := client.Post(baseURL+"/signup", "application/json", bytes.NewBufferString(signupBody))
+	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("SignUp request failed: %v", err)
+		t.Fatalf("request failed: %v", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("SignUp failed: expected 200 OK, got %s", resp.Status)
-	}
+	return resp
+}
 
-	// Log In
-	loginBody := fmt.Sprintf(`{"user":{"email":"%s","password":"test1234test"}}`, email)
-	resp, err = client.Post(baseURL+"/login", "application/json", bytes.NewBufferString(loginBody))
-	if err != nil {
-		t.Fatalf("Login request failed: %v", err)
+func decodeJSON[T any](t *testing.T, r io.Reader) T {
+	t.Helper()
+	var v T
+	if err := json.NewDecoder(r).Decode(&v); err != nil {
+		t.Fatalf("failed to decode json: %v", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Login failed: expected 200 OK, got %s", resp.Status)
-	}
+	return v
+}
 
-	var loginResp struct {
-		Token struct {
-			Plaintext string `json:"plaintext"`
-		} `json:"token"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
-		t.Fatalf("Failed to parse login response: %v", err)
-	}
-	token := loginResp.Token.Plaintext
-	if token == "" {
-		t.Fatal("Empty token received on login")
-	}
+func TestUserFlow(t *testing.T) {
+	flag.Parse()
+	client := &http.Client{Timeout: 15 * time.Second}
+	email := fmt.Sprintf("testuser-%s@test.com", randomSuffix())
+	var token, taskID string
 
-	// Add Task
-	taskBody := `{
-        "task": {
-            "title": "sample title",
-            "description": "sample description",
-            "status": "sample status",
-            "end": "2022-04-02T09:24:05Z"
-        }
-    }`
-	resp, err = doAuthRequest("POST", baseURL+"/task", token, bytes.NewBufferString(taskBody))
-	if err != nil {
-		t.Fatalf("Add Task request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Add Task failed: expected 200 or 201, got %s", resp.Status)
-	}
+	// --- Positive Cases ---
+	t.Run("PositiveCases", func(t *testing.T) {
+		t.Run("SignUp", func(t *testing.T) {
+			body := map[string]any{"user": map[string]string{"email": email, "password": "test1234test"}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/signup", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+		})
 
-	var taskResp struct {
-		TaskID string `json:"task_id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&taskResp); err != nil {
-		t.Fatalf("Failed to parse add task response: %v", err)
-	}
-	taskID := taskResp.TaskID
-	if taskID == "" {
-		t.Fatal("Task ID is empty in add task response")
-	}
+		t.Run("Login", func(t *testing.T) {
+			body := map[string]any{"user": map[string]string{"email": email, "password": "test1234test"}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/login", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+			loginResp := decodeJSON[struct {
+				Token struct {
+					Plaintext string `json:"plaintext"`
+				} `json:"token"`
+			}](t, resp.Body)
+			token = loginResp.Token.Plaintext
+			if token == "" {
+				t.Fatal("empty token")
+			}
+		})
 
-	// List Task
-	resp, err = doAuthRequest("GET", baseURL+"/task", token, nil)
-	if err != nil {
-		t.Fatalf("List Task request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("List Task failed: expected 200 OK, got %s", resp.Status)
-	}
+		t.Run("AddTask", func(t *testing.T) {
+			body := map[string]any{"task": map[string]string{
+				"title":       "sample title",
+				"description": "sample description",
+				"status":      "sample status",
+				"end":         "2022-04-02T09:24:05Z",
+			}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/task", token, body)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+				t.Fatalf("expected 200 or 201, got %d", resp.StatusCode)
+			}
+			taskResp := decodeJSON[struct {
+				TaskID string `json:"task_id"`
+			}](t, resp.Body)
+			taskID = taskResp.TaskID
+		})
 
-	var listResp struct {
-		Tasks []struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
-		} `json:"tasks"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-		t.Fatalf("Failed to parse list task response: %v", err)
-	}
-	found := false
-	for _, task := range listResp.Tasks {
-		if task.ID == taskID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("Added task with ID %s not found in list", taskID)
-	}
+		t.Run("ListTask", func(t *testing.T) {
+			resp := doAuthRequest(t, client, "GET", baseURL+"/task", token, nil)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+			listResp := decodeJSON[struct {
+				Tasks []struct {
+					ID string `json:"id"`
+				} `json:"tasks"`
+			}](t, resp.Body)
+			found := false
+			for _, task := range listResp.Tasks {
+				if task.ID == taskID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("task %s not found", taskID)
+			}
+		})
 
-	// Delete Task
-	deleteURL := fmt.Sprintf("%s/task/%s", baseURL, taskID)
-	resp, err = doAuthRequest("DELETE", deleteURL, token, nil)
-	if err != nil {
-		t.Fatalf("Delete Task request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		t.Fatalf("Delete Task failed: expected 200 OK or 204 No Content, got %s", resp.Status)
-	}
+		t.Run("DeleteTask", func(t *testing.T) {
+			resp := doAuthRequest(t, client, "DELETE", fmt.Sprintf("%s/task/%s", baseURL, taskID), token, nil)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+				t.Fatalf("expected 200 or 204, got %d", resp.StatusCode)
+			}
+		})
 
-	// Log Out
-	logoutBody := fmt.Sprintf(`{"token":{"plaintext":"%s"}}`, token)
-	resp, err = client.Post(baseURL+"/logout", "application/json", bytes.NewBufferString(logoutBody))
-	if err != nil {
-		t.Fatalf("Logout request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Logout failed: expected 200 OK, got %s", resp.Status)
-	}
+		t.Run("Logout", func(t *testing.T) {
+			body := map[string]any{"token": map[string]string{"plaintext": token}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/logout", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+		})
+	})
 
 	// --- Negative Cases ---
+	t.Run("NegativeCases", func(t *testing.T) {
+		t.Run("BadSignup", func(t *testing.T) {
+			body := map[string]any{"user": map[string]string{"email": "", "password": ""}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/signup", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("expected failure, got 200")
+			}
+		})
 
-	// Sign Up with missing fields
-	badSignupBody := `{"user":{"email":"","password":""}}`
-	resp, err = client.Post(baseURL+"/signup", "application/json", bytes.NewBufferString(badSignupBody))
-	if err != nil {
-		t.Fatalf("Bad signup request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("Expected failure on bad signup, got 200 OK")
-	}
+		t.Run("DuplicateSignup", func(t *testing.T) {
+			body := map[string]any{"user": map[string]string{"email": email, "password": "test1234test"}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/signup", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("expected failure, got 200")
+			}
+		})
 
-	// Duplicate Signup (using same email as before)
-	resp, err = client.Post(baseURL+"/signup", "application/json", bytes.NewBufferString(signupBody))
-	if err != nil {
-		t.Fatalf("Duplicate signup request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("Expected failure on duplicate signup, got 200 OK")
-	}
+		t.Run("WrongPasswordLogin", func(t *testing.T) {
+			body := map[string]any{"user": map[string]string{"email": email, "password": "wrongpassword"}}
+			resp := doAuthRequest(t, client, "POST", baseURL+"/login", "", body)
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("expected failure, got 200")
+			}
+		})
 
-	// Login with wrong password
-	wrongLoginBody := fmt.Sprintf(`{"user":{"email":"%s","password":"wrongpassword"}}`, email)
-	resp, err = client.Post(baseURL+"/login", "application/json", bytes.NewBufferString(wrongLoginBody))
-	if err != nil {
-		t.Fatalf("Login with wrong password request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("Expected failure on wrong password login, got 200 OK")
-	}
+		t.Run("NoTokenAccess", func(t *testing.T) {
+			resp := doAuthRequest(t, client, "GET", baseURL+"/task", "", nil)
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("expected failure, got 200")
+			}
+		})
 
-	// Access protected resource without token
-	req, err := http.NewRequest("GET", baseURL+"/task", nil)
-	if err != nil {
-		t.Fatalf("Failed to create unauthorized request: %v", err)
-	}
-	resp, err = client.Do(req)
-	if err != nil {
-		t.Fatalf("Unauthorized request failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("Expected failure on unauthorized access, got 200 OK")
-	}
-
-	// Use token after logout
-	resp, err = doAuthRequest("GET", baseURL+"/task", token, nil)
-	if err != nil {
-		t.Fatalf("Authorized request after logout failed: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		t.Fatalf("Expected failure when using token after logout, got 200 OK")
-	}
+		t.Run("TokenAfterLogout", func(t *testing.T) {
+			resp := doAuthRequest(t, client, "GET", baseURL+"/task", token, nil)
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				t.Fatalf("expected failure, got 200")
+			}
+		})
+	})
 }
