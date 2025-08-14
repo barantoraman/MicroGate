@@ -10,7 +10,9 @@ The system emphasises two key aspects:
 Users interact with the system via HTTP requests in JSON format through the API Gateway, which forwards authentication and task management requests to the relevant microservices over gRPC.  
 
 ## Architecture Overview
-![alt text](architecture-migrogate.png)
+
+<img width="1020" height="558" alt="architecture-migrogate" src="https://github.com/user-attachments/assets/283d3ac2-a65f-4487-b245-c8ca81646baf" />
+
 The system consists of three main microservices:
 
 1. **API Gateway Microservice**  
